@@ -1,0 +1,10 @@
+Package: GLMGAMRF
+Title: Package fits GLM, GAM and Random Forest models to survey data
+Version: 0.0.0.9000
+Authors@R: person("Chris", "Rooper", email = "chris.rooper@noaa.gov", role = c("aut", "cre"))
+Description: The purpose of this code is to make GLM, GAM and Random Forest models based on habitat variables. These models are then used to compute model based estimates of abundance for fishes in the Aleutian Islands and Gulf of Alaska. The code takes bottom trawl survey data and habitat variables from RacebaseExtract.R code. The package produces annual abundance estimates with errors (either by the Delta method or bootstrapping).
+Depends: R (>= 3.1.0)
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
