@@ -1,0 +1,349 @@
+---
+title: |-
+  Habitat Model Abundance Indices estimated from
+  RACE Bottom Trawl Survey using GLM, GAM and Random
+  Forest
+author: "Chris Rooper"
+date: "June 15, 2018"
+output: github_document
+---
+
+\newpage
+
+```{r setup,include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(devtools)
+library(ggplot2)
+library(pander)
+library(mgcv)
+library(MEHRSI)
+library(randomForest)
+devtools::install_github("rooperc4/GLMGAMRF")
+library("GLMGAMRF")
+options(width=50, width.cutoff=50, digits = 3) 
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, warning=FALSE, message=FALSE)
+```
+
+##Purpose
+The purpose of this code is to make GLM, GAM and Random Forest models based on habitat variables. These models are then used to compute model based estimates of abundance for fishes in the Aleutian Islands and Gulf of Alaska. The code takes bottom trawl survey data and habitat variables from RacebaseExtract.R code. The package produces annual abundance estimates with errors (either by the Delta method or bootstrapping).
+
+
+***
+
+##Setup data
+###Define species of interest and habitat variables
+This code is designed to be run with output from RACEBASE (or other data source) where rows represent hauls to be used in the calculation of the survey index and columns indicate CPUE for species (zero-filled data), habitat and other variables. An example is the data included for juvenile Pacific Ocean perch included (the same data as in the MEHRSI package).
+
+```{r read_Data}
+data("Juvenile_POP_Data")
+pandoc.table(head(Juvenile_POP_Data),caption="Example RACEBASE extract for juvenile POP catches in the Gulf of Alaska",split.table=Inf)
+
+```
+
+In this data you have a column for the haul identifier, the midpoint positions of the tow, a year variable indicating the survey year, the depth of the thermocline, the bottom temperature and bottom depth and the seafloor slope. The catch of structure forming invertebrates (coral and sponge), the termperature at the thermocline and the total catch of shrimp are also included as potential habitat variables. The final column is the CPUE of juvenile Pacific Ocean perch (in kg/ha). For this analysis, POP were considered juveniles if they were < 250 mm in length.
+
+For both the GLM and GAM approaches, we will use a compound model that predicts a binary process (presence or absence) and a log-normal process with habitat covariates. The models both assume a Delta Log-Normal distribution for the data.
+
+First we do a little data manipulation to ID the data set to be used for presence-absence modeling and the subset of data with positive catches only for use in the log-normal model. The species names are set up for easy looping if you have multiple species in the same data set. In this case the "species.name" variable can include a vector of species names corresponding to column names in the data set. Then you could just loop around the entire code below, with some additonal code to capture the model outputs.
+
+```{r create_PA_data}
+PA.data<-Juvenile_POP_Data
+species.name<-c("juvenile_POP_CPUE")
+CPUE.data<-subset(PA.data,PA.data[species.name]>0)
+```
+
+#GENERAL LINEAR MODEL
+##Presence-absence model
+For the presence and absence model we specify the x and y variables and set up the formula. In this case we have chosen 4 x variables and converted the CPUE data to presence (1) or absence (0). It is important to include year as a factor in the formula so that the annual abundance index can be predicted.
+ 
+```{r make_glm_pa_formula}
+glm.pa.xvars<-c("inverts","slope","btemp","bdepth")
+glm.pa.yvar<-ifelse(PA.data[species.name]>0,1,0)
+glm.pa.form <- as.formula(paste("glm.pa.yvar ~", paste(glm.pa.xvars,collapse="+"),"+as.factor(year)",sep=""))
+```
+
+Next, we fit the initial glm model using a binomial distribution. We use backwards term selection based on the model AIC to remove insignificant terms in the equation. The best-fitting model is determined when the removal of additional terms results in no improvement to the AIC.
+
+```{r fit_glm_pa_model}
+
+for(i in 1:length(glm.pa.xvars)){
+pa.glm <- glm(glm.pa.form, family = binomial, data = PA.data)
+gcv_glm<-pa.glm$aic
+	pvals<-summary(pa.glm)$coefficients[2:(length(glm.pa.xvars)+1),4]
+	least_sig<-which.max(pvals)
+
+glm.pa.xvars1<-glm.pa.xvars[-least_sig]
+glm.pa.form1 <- as.formula(paste("glm.pa.yvar ~", paste(glm.pa.xvars1,collapse="+"),"+as.factor(year)",sep=""))
+pa.glm1 <- glm(glm.pa.form1, family = binomial, data =PA.data)
+gcv_glm1<-pa.glm1$aic
+
+if(gcv_glm1<gcv_glm){
+	glm.pa.form<-glm.pa.form1
+#	gcv_glm<-gcv_glm1
+	glm.pa.xvars<-glm.pa.xvars1
+}
+if(gcv_glm1>=gcv_glm)break}
+pander(summary(pa.glm),split.table=Inf, caption="Best-fitting model of Juvenile POP presence or absence")
+
+```
+
+Using the best-fitting model we plot the typical data checks, residuals, and the observed and predicted values.
+
+```{r plot_glm_pa_results}
+par(mfrow=c(2,2))
+plot(pa.glm)
+
+par(mfrow=c(1,1))
+pa.glm.data<-data.frame(pa.glm$y,pa.glm$fitted.values,pa.glm$data$year)
+ggplot(pa.glm.data,aes(x=as.factor(pa.glm.data.year),y=pa.glm.fitted.values,fill=as.factor(pa.glm.y)))+geom_violin()+geom_boxplot(width=.1,position=position_dodge(.9))+xlab("Absence or Presence")+ylab("Predicted probability of presence")+scale_fill_brewer(palette="Blues")+theme(legend.position="none")
+```
+
+
+##ABUNDANCE MODEL
+For the abundance model we specify the x and y variables and set up the formula. In this case we have chosen the same 4 x variables as the presence-absence model (this doesn't have to be true) and log-transformed the CPUE data. Again, it is important to include year as a factor in the formula so that the annual abundance index can be predicted.
+
+```{r make_glm_cpue_formula}
+glm.cpue.yvar<-unlist(log(CPUE.data[species.name]))
+glm.cpue.xvars<-c("inverts","slope","btemp","bdepth")
+glm.cpue.form <- as.formula(paste("glm.cpue.yvar ~", paste(glm.cpue.xvars,collapse="+"),"+as.factor(year)",sep=""))
+```
+
+Next, we fit the initial glm model using a guassian distribution. We use backwards term selection based on the model AIC to remove insignificant terms in the equation. The best-fitting model is determined when the removal of additional terms results in no improvement to the AIC.
+
+```{r fit_glm_cpue_model}
+
+for(i in 1:length(glm.cpue.xvars)){
+cpue.glm <- glm(glm.cpue.form, family = gaussian, data = CPUE.data)
+gcv_glm<-cpue.glm$aic
+	pvals<-summary(cpue.glm)$coefficients[2:(length(glm.cpue.xvars)+1),4]
+	least_sig<-which.max(pvals)
+
+glm.cpue.xvars1<-glm.cpue.xvars[-least_sig]
+glm.cpue.form1 <- as.formula(paste("glm.cpue.yvar ~", paste(glm.cpue.xvars1,collapse="+"),"+as.factor(year)",sep=""))
+cpue.glm1 <- glm(glm.cpue.form1, family = gaussian, data =CPUE.data)
+gcv_glm1<-cpue.glm1$aic
+
+if(gcv_glm1<gcv_glm){
+	glm.cpue.form<-glm.cpue.form1
+#	gcv_glm<-gcv_glm1
+	glm.cpue.xvars<-glm.cpue.xvars1
+}
+if(gcv_glm1>=gcv_glm)break}
+print(summary(cpue.glm))
+
+```
+
+Using the best-fitting model we plot the typical data checks, residuals, and the observed and predicted values.
+
+```{r plot_glm_cpue_results}
+par(mfrow=c(2,2))
+plot(cpue.glm)
+
+par(mfrow=c(1,1))
+cpue.glm.data<-data.frame(cpue.glm$y,cpue.glm$fitted.values,cpue.glm$data$year)
+
+ggplot(cpue.glm.data,aes(x=cpue.glm.y,y=cpue.glm.fitted.values,color=as.factor(cpue.glm.data.year)))+geom_point()+xlab("Observed CPUE")+ylab("Predicted CPUE")+theme(legend.position="right",legend.title=element_blank(),panel.background=element_blank())+geom_smooth(method="lm",formula=y~x,se=FALSE)
+```
+
+##COMBINING GLMs INTO ESTIMATE
+The next step in computing the annual index of abundance is to predict the value of CPUE in each year, holding the other variables constant at their median values. For each year, it is important to generate a variance estimate. In this package you can do this either by bootstrapping or by the delta method.
+
+For the delta method use the "predict.glm.index" function. This will take the two models (for presence-absence and abundance), combine them to create the index of abundance (pa.glm*cpue.glm with x variables held at their median values). It will output a table of year, estimate and 95% confidence intervals (based on the delta-method) for the survey data.
+
+```{r estimate_glm_index_dm}
+
+glm.index<-predict.glm.index(pa.glm,cpue.glm)
+
+pander::pandoc.table(glm.index,row.names=FALSE,digits=4, caption="Survey abundance index using Delta-lognormal GLM and delta-method for estimating confidence intervals")
+
+p<-ggplot(glm.index,aes(x=years,y=glm.index))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=lower_CI, ymax=upper_CI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=glm.index$years)+ggtitle(paste("Survey index for ",species.name, " (GLM and Delta method CI's)",sep=""))
+p
+```
+For the bootstrapping method use the "predict.glm.bindex" function. This will take the two models (for presence-absence and abundance), combine them to create the index of abundance (pa.glm*cpue.glm with x variables held at their median values). It will output a table of year, estimate and 95% confidence intervals (based on the bootstrap) for the survey data. You can specify the number of bootstraps in the predict.glm.bindex function by setting boot_reps=..., otherwise the default is 500 replicates.
+
+```{r estimate_glm_index_boot}
+
+glm.indexb<-predict.glm.bindex(pa.glm,cpue.glm)
+
+pander::pandoc.table(glm.indexb,row.names=FALSE,digits=4,caption="Survey abundance index using Delta-lognormal GLM and bootstrapping method for estimating confidence intervals")
+
+p<-ggplot(glm.indexb,aes(x=years,y=glm.index))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=lower_bootCI, ymax=upper_bootCI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=glm.index$years)+ggtitle(paste("Survey index for ",species.name, " (GLM and bootstrapped CI's)",sep=""))
+p
+
+```
+
+At this point we have generated a glm estimate of the abundance of our species using the delta-lognormal method.
+
+***
+
+
+
+#GENERALIZED ADDITIVE MODEL
+
+The next step is to generate the survey index using a delta-GAM method. It follows a parallel process to the glm, with some minor tweaks to adjust inputs and outputs for the various functions. The GAM models are generated using the mgcv package (Wood 2006)
+
+##Presence-absence model
+For the presence and absence model we specify the x and y variables and set up the formula. In this case we have chosen 4 x variables and converted the CPUE data to presence (1) or absence (0). It is important to include year as a factor in the formula so that the annual abundance index can be predicted. Habitat variables are included as part of the formula with an s() indicating fitting a smooth spline to the data, k=4 is used here to reduce the number of inflection points in the smooth fit. Since it is presence absence data, a binomial distribution and link=logit is used.  
+
+```{r create_gam_pa_formula}
+gam.pa.xvars<-c("s(inverts,k=4)","s(slope,k=4)","s(btemp,k=4)","s(bdepth,k=4)","as.factor(year)")
+gam.pa.yvar<-ifelse(PA.data[species.name]>0,1,0)
+gam.pa.form <-as.formula(paste("gam.pa.yvar ~", paste(gam.pa.xvars,collapse="+"),"+as.factor(year)",sep=""))
+```
+
+Next we fit the GAM to the presence-absence data and then iteratively reduce the model to its most parsimonious form by removing insignificant habitat variables. See Weinberg and Kotwicki 2009 for the details on variable removal.
+
+```{r fit_gam_pa_model}
+
+for(i in 1:length(gam.pa.xvars)){
+pa.gam <- gam(gam.pa.form, family = binomial, data = PA.data,control=list(keepData=TRUE))
+gcv_gam<-pa.gam$gcv.ubre
+	pvals<-summary(pa.gam)$s.pv
+	least_sig<-which.max(pvals)
+
+gam.pa.xvars1<-gam.pa.xvars[-least_sig]
+gam.pa.form1 <- as.formula(paste("gam.pa.yvar ~", paste(gam.pa.xvars1,collapse="+"),"+as.factor(year)",sep=""))
+pa.gam1 <- gam(gam.pa.form1, family = binomial, data =PA.data)
+gcv_gam1<-pa.gam1$gcv.ubre
+
+pts1<-ifelse(gcv_gam>gcv_gam1,1,0)
+pts2<-ifelse(round(summary(pa.gam)$edf[least_sig],1)==1,1,0)
+pts3<-ifelse(summary(pa.gam)$s.pv[least_sig]>.05,1,0)
+if(pts1+pts2+pts3>1){
+	gam.pa.form<-gam.pa.form1
+	gam.pa.xvars<-gam.pa.xvars1}
+if(pts1+pts2+pts3<2)break}
+print(summary(pa.gam))
+
+```
+
+Using the best-fitting model we plot the typical data checks, residuals, and the observed and predicted values.
+
+```{r plot_gam_pa_results}
+par(mfrow=c(2,2))
+gam.check(pa.gam)
+plot(pa.gam,scale=0,shade=TRUE,all.terms=TRUE,pages=1)
+par(mfrow=c(1,1))
+pa.gam.data<-data.frame(pa.gam$y,pa.gam$fitted.values,pa.gam$data$year)
+ggplot(pa.gam.data,aes(x=as.factor(pa.gam.data.year),y=pa.gam.fitted.values,fill=as.factor(pa.gam.data[,1])))+geom_violin()+geom_boxplot(width=.1,position=position_dodge(.9))+xlab("Absence or Presence")+ylab("Predicted probability of presence")+scale_fill_brewer(palette="Blues")+theme(legend.position="none")
+```
+
+##ABUNDANCE MODEL
+For the abundance model we specify the x and y variables and set up the formula. In this case we have chosen the same 4 x variables as the presence-absence model (this doesn't have to be true) and log-transformed the CPUE data. Again, it is important to include year as a factor in the formula so that the annual abundance index can be predicted.
+
+```{r create_gam_cpue_formula}
+gam.cpue.yvar<-unlist(log(CPUE.data[species.name]))
+gam.cpue.xvars<-c("s(inverts,k=4)","s(slope,k=4)","s(btemp,k=4)","s(bdepth,k=4)")
+gam.cpue.form <- as.formula(paste("gam.cpue.yvar ~", paste(gam.cpue.xvars,collapse="+"),"+as.factor(year)",sep=""))
+```
+
+Next, we fit the initial gam model using a guassian distribution. We use backwards term selection based on the model fit (see Weinberg and Kotwicki 2009) to remove insignificant terms in the equation. The best-fitting model is determined when the removal of additional terms results in no improvement to the model.
+
+```{r fit_gam_cpue_model}
+
+for(i in 1:length(gam.cpue.xvars)){
+cpue.gam <- gam(gam.cpue.form, family = gaussian, data = CPUE.data,control=list(keepData=TRUE))
+gcv_gam<-cpue.gam$gcv.ubre
+	pvals<-summary(cpue.gam)$s.pv
+	least_sig<-which.max(pvals)
+
+gam.cpue.xvars1<-gam.cpue.xvars[-least_sig]
+gam.cpue.form1 <- as.formula(paste("gam.cpue.yvar ~", paste(gam.cpue.xvars1,collapse="+"),"+as.factor(year)",sep=""))
+cpue.gam1 <- gam(gam.cpue.form1, family = gaussian, data =CPUE.data)
+gcv_gam1<-cpue.gam1$gcv.ubre
+
+pts1<-ifelse(gcv_gam>gcv_gam1,1,0)
+pts2<-ifelse(round(summary(cpue.gam)$edf[least_sig],1)==1,1,0)
+pts3<-ifelse(summary(cpue.gam)$s.pv[least_sig]>.05,1,0)
+if(pts1+pts2+pts3>1){
+	gam.cpue.form<-gam.cpue.form1
+	gam.cpue.xvars<-gam.cpue.xvars1
+}
+if(pts1+pts2+pts3<2)break}
+print(summary(cpue.gam))
+```
+
+Using the best-fitting model we plot the typical data checks, residuals, and the observed and predicted values.
+
+```{r plot_gam_cpue_results}
+par(mfrow=c(2,2))
+gam.check(cpue.gam)
+
+plot(cpue.gam,scale=0,shade=TRUE,all.terms=TRUE,pages=1)
+
+par(mfrow=c(1,1))
+cpue.gam.data<-data.frame(cpue.gam$y,cpue.gam$fitted.values,cpue.gam$data$year)
+
+ggplot(cpue.gam.data,aes(x=cpue.gam.data[,1],y=cpue.gam.fitted.values,color=as.factor(cpue.gam.data.year)))+geom_point()+xlab("Observed CPUE")+ylab("Predicted CPUE")+theme(legend.position="right",legend.title=element_blank(),panel.background=element_blank())+geom_smooth(method="lm",formula=y~x,se=FALSE)
+
+```
+
+
+##COMBINING GAMs INTO ESTIMATE
+The next step in computing the annual index of abundance is to predict the value of CPUE in each year, holding the other variables constant at their median values. For each year, it is important to generate a variance estimate. In this package you can do this either by bootstrapping or by the delta method.
+
+For the delta method use the "predict.gam.index" function. This will take the two models (for presence-absence and abundance), combine them to create the index of abundance (pa.gam*cpue.gam with x variables held at their median values). It will output a table of year, estimate and 95% confidence intervals (based on the delta-method) for the survey data.
+
+```{r estimate_gam_index_dm}
+
+gam.index<-predict.gam.index(pa.gam,cpue.gam)
+
+pander::pandoc.table(gam.index,row.names=FALSE,digits=4, caption="Survey abundance index using Delta-lognormal GAM and delta-method for estimating confidence intervals")
+
+p<-ggplot(gam.index,aes(x=years,y=gam.index))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=lower_CI, ymax=upper_CI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=gam.index$years)+ggtitle(paste("Survey index for ",species.name, " (GAM and Delta method CI's)",sep=""))
+p
+```
+
+For the bootstrapping method use the "predict.gam.bindex" function. This will take the two models (for presence-absence and abundance), combine them to create the index of abundance (pa.gam*cpue.gam with x variables held at their median values). It will output a table of year, estimate and 95% confidence intervals (based on the bootstrap) for the survey data. You can specify the number of bootstraps in the predict.gam.bindex function by setting boot_reps=..., otherwise the default is 500 replicates.
+
+```{r estimate_gam_index_boot}
+
+gam.indexb<-predict.gam.bindex(pa.gam,cpue.gam)
+
+pander::pandoc.table(gam.indexb,row.names=FALSE,digits=4,caption="Survey abundance index using Delta-lognormal GAM and bootstrapping method for estimating confidence intervals")
+
+p<-ggplot(gam.indexb,aes(x=years,y=gam.index))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=lower_bootCI, ymax=upper_bootCI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=gam.indexb$years)+ggtitle(paste("Survey index for ",species.name, " (GAM and bootstrapped CI's)",sep=""))
+p
+
+```
+
+At this point we have generated a gam estimate of the abundance of our species using the delta-lognormal method.
+
+***
+
+#RANDOM FOREST -- COMING SOON!
+
+
+***
+
+#SPATIAL PATTERNS IN RESIDUALS
+
+Look for any significant spatial patterns in the residuals, by fitting a kriging model and adding back into the predicted CPUE. This is done with the spatial_resids function from the MEHRSI package. First we do it for the GLM model.
+
+
+```{r spatial_residuals_glm, message=FALSE}
+glm.cpue.predict<-predict(cpue.glm,pa.glm$data,type="response")*pa.glm$fitted.values
+spatial_resids(PA.data$long,PA.data$lat,(glm.cpue.predict-unlist(PA.data[species.name])),glm.cpue.predict,unlist(PA.data[species.name]),region="GOA")
+knitr::include_graphics("spatial_resids.png")
+```
+ Here's the code for the GAM model.
+ 
+```{r spatial_residuals_gam, message=FALSE}
+gam.cpue.predict<-predict(cpue.gam,pa.gam$data,type="response")*pa.gam$fitted.values
+spatial_resids(PA.data$long,PA.data$lat,(gam.cpue.predict-unlist(PA.data[species.name])),gam.cpue.predict,unlist(PA.data[species.name]),region="GOA")
+knitr::include_graphics("spatial_resids.png")
+```
+
+
+
