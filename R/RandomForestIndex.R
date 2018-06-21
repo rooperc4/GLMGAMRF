@@ -19,14 +19,16 @@
 #######bootstrapping method
 
 predict.rf.index<-function(data,rf.yvar,rf.form,rf.model,boot_reps=500){
-  pa.meds<-t(data.frame(apply(data,MARGIN=2,FUN=median)))
-  pa.meds.names<-colnames(pa.meds)
-  yrs<-unique(data$year)
+  pa.meds<-as.numeric(t(apply(data,MARGIN=2,FUN="median",na.rm=TRUE)))
+  pa.meds<-t(matrix(pa.meds,byrow=FALSE))
+  pa.meds.names<-colnames(data)
+  year<-unique(data$year)
   
-  pa.meds<-data.frame(rep.row(pa.meds,length(yrs)))
+  pa.meds<-rep.row(pa.meds,length(yrs))
   colnames(pa.meds)<-pa.meds.names
-  pa.meds$year<-yrs
-  
+  colnames(pa.meds)[which(colnames(pa.meds)=="year")]<-"y1"
+  pa.meds<-data.frame(pa.meds,year)
+
   rf.raw.index<-predict(rf.model,newdata=pa.meds,type="response")
   rf.index<-exp(rf.raw.index)-.5*min(subset(rf.yvar,rf.yvar>0))
 
