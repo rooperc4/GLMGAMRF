@@ -193,7 +193,7 @@ The next step is to generate the survey index using a delta-GAM method. It follo
 For the presence and absence model we specify the x and y variables and set up the formula. In this case we have chosen 4 x variables and converted the CPUE data to presence (1) or absence (0). It is important to include year as a factor in the formula so that the annual abundance index can be predicted. Habitat variables are included as part of the formula with an s() indicating fitting a smooth spline to the data, k=4 is used here to reduce the number of inflection points in the smooth fit. Since it is presence absence data, a binomial distribution and link=logit is used.  
 
 ```{r create_gam_pa_formula}
-gam.pa.xvars<-c("s(inverts,k=4)","s(slope,k=4)","s(btemp,k=4)","s(bdepth,k=4)","as.factor(year)")
+gam.pa.xvars<-c("s(inverts,k=4)","s(slope,k=4)","s(btemp,k=4)","s(bdepth,k=4)")
 gam.pa.yvar<-ifelse(PA.data[species.name]>0,1,0)
 gam.pa.form <-as.formula(paste("gam.pa.yvar ~", paste(gam.pa.xvars,collapse="+"),"+as.factor(year)",sep=""))
 ```
@@ -322,9 +322,99 @@ At this point we have generated a gam estimate of the abundance of our species u
 
 ***
 
-#RANDOM FOREST -- COMING SOON!
+#RANDOM FOREST
+
+The next model version is the random forest model. The first setp is to set up the data again. Here we will do only a single model for CPUE. Random forest does not necessarily require some of the assumptions of the statistical models (like an assumed error distribution or absence of collinearity among independent variables). So the setup and implimentation of the model is a bit simpler.
+
+```{r create_rf_formula}
+rf.xvars<-c("inverts","slope","btemp","bdepth")
+rf.yvar<-unlist(log(PA.data[species.name]+.5*min(subset(PA.data[species.name],PA.data[species.name]>0))))
+rf.form <-as.formula(paste("rf.yvar ~", paste(rf.xvars,collapse="+"),"+year",sep=""))
+
+```
+
+Now we fit the random forest model using the PA.data dataset and the formula above.
+
+```{r echo=FALSE, eval=TRUE, cache = TRUE}
+
+rf.cpue <- randomForest(rf.form,data=PA.data, mtry=3, ntree=1000, importance=TRUE, do.trace=250, keep.forest=TRUE) 
+print(rf.cpue)	
+
+```
+
+Now plot diagnostics for the random forest model (the typical data checks, residuals, and the observed and predicted values).
+
+```{r plot_rf_results}
+par(mfrow=c(2,2))
+plot(rf.cpue)
+rf.lm<-lm(rf.cpue$predicted~rf.yvar)
+plot(rf.lm)
+summary(rf.lm)
+varImpPlot(rf.cpue)
+calc_RMSE(rf.cpue$predicted,rf.yvar)
+
+par(mfrow=c(length(rf.xvars)/2,2))
+t2<-t(cbind(apply(PA.data[,rf.xvars],2,FUN="median",na.rm=TRUE)))
+t4<-median(PA.data$year)
+t2<-cbind(t2,year=t4)
+for(i in 1:length(rf.xvars)){
+	mindata<-min(PA.data[,rf.xvars[i]],na.rm=TRUE)
+	maxdata<-max(PA.data[,rf.xvars[i]],na.rm=TRUE)
+	xdata<-seq(mindata,maxdata,by=(maxdata-mindata)/1000)
+  t3<-rep.row(t2,1001)
+  colnames(t3)<-colnames(t2)
+	t3[,i]<-xdata
+	p1<-predict(rf.cpue,t3,type="response")
+	plot(p1~xdata,xlab=rf.xvars[i],ylab="Effect on CPUE")
+}
+
+par(mfrow=c(1,1))
+rf.data<-data.frame(rf.yvar,rf.cpue$predicted,PA.data$year)
+ggplot(rf.data,aes(x=rf.yvar,y=rf.cpue.predicted,color=as.factor(PA.data.year)))+geom_point()+xlab("Observed CPUE")+ylab("Predicted CPUE")+theme(legend.position="right",legend.title=element_blank(),panel.background=element_blank())+geom_smooth(method="lm",formula=y~x,se=FALSE)
+```
 
 
+```{r estimate_gam_index_dm}
+
+rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue)
+pander::pandoc.table(rf.index,row.names=FALSE,digits=4, caption="Survey abundance index using Random Forest model")
+
+p<-ggplot(rf.index,aes(x=years,y=rf.index))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=lower_bootCI, ymax=upper_bootCI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=rf.index$years)+ggtitle(paste("Survey index for ",species.name, " (Random Forest method CI's)",sep=""))
+p
+```
+
+
+***
+
+#DESIGN BASED ESTIMATE
+The design based estimate calls a function "Stratified_CPUE" that takes the CPUE values, the stratum names, stratum areas and year and spits out a time series of biomass estimates and variances (both total and by strata). The function also takes an estimate of the proportion of the strata that is "trawlable". This defaults to 1.
+
+The stratum designation and stratum area for each haul is needed for this estimate, so here we read in this data and attach to the Juvnenile_POP_Data. 
+
+Next we use the stratum_area function to generate stratum areas for each haul in the data set. We need to specify the data set, the column name that has the stratum designations and the region of interest for the function.
+
+```{r}
+Design.data<-get_strata_area(Juvenile_POP_Data,"STRATUM","GOA")
+Design.data<-subset(Design.data,Design.data$STRATUM>0)
+
+```
+
+Then we use the Stratified_CPUE function to generate design based estimates. For this function we need to specify columns for the calculations: the CPUE column, the year column, the strata designator, the strata area, the region, and the proportion trawlable (default is 1). Note, for the Juvenile_POP_Data, there are only 4 years where data on the strata membership is known (due to the time when these data were extracted from RACEBASE), therefore, the time series is not complete.
+
+```{r Design_index}
+
+design.index<-Stratified_CPUE(Design.data$juvenile_POP_CPUE,Design.data$year,Design.data$STRATUM,Design.data$AREA_KM2,"GOA",1, "CPUE")
+pander::pandoc.table(design.index,row.names=FALSE,digits=4,caption="Survey abundance index design-based estimators")
+
+p<-ggplot(design.index,aes(x=Year,y=CPUE))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=Lower_CI, ymax=Upper_CI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=design.index$Year)+ggtitle(paste("Survey index for ",species.name, " (design based with CI's)",sep=""))
+p
+
+
+```
 ***
 
 #SPATIAL PATTERNS IN RESIDUALS
@@ -332,14 +422,14 @@ At this point we have generated a gam estimate of the abundance of our species u
 Look for any significant spatial patterns in the residuals, by fitting a kriging model and adding back into the predicted CPUE. This is done with the spatial_resids function from the MEHRSI package. First we do it for the GLM model.
 
 
-```{r spatial_residuals_glm, message=FALSE}
+```{r spatial_residuals_glm, message=FALSE,eval=FALSE}
 glm.cpue.predict<-predict(cpue.glm,pa.glm$data,type="response")*pa.glm$fitted.values
 spatial_resids(PA.data$long,PA.data$lat,(glm.cpue.predict-unlist(PA.data[species.name])),glm.cpue.predict,unlist(PA.data[species.name]),region="GOA")
 knitr::include_graphics("spatial_resids.png")
 ```
  Here's the code for the GAM model.
  
-```{r spatial_residuals_gam, message=FALSE}
+```{r spatial_residuals_gam, message=FALSE,eval=FALSE}
 gam.cpue.predict<-predict(cpue.gam,pa.gam$data,type="response")*pa.gam$fitted.values
 spatial_resids(PA.data$long,PA.data$lat,(gam.cpue.predict-unlist(PA.data[species.name])),gam.cpue.predict,unlist(PA.data[species.name]),region="GOA")
 knitr::include_graphics("spatial_resids.png")

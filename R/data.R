@@ -9,7 +9,6 @@
 #' combined catch of shrimp species in the bottom trawl haul and finally catch per unit of 
 #' effort for juvenile POP.
 
-#'
 #' @format A data frame with 4475 rows and 12 variables:
 #' \describe{
 #'   \item{hauljoin}{unique haul identifier from RACEBASE}
@@ -27,3 +26,47 @@
 #' }
 #' @source {RACEBASE}
 "Juvenile_POP_Data"
+
+#' goa.strata.area
+#' 
+#' Table of stata area for the Gulf of Alaska
+#' 
+#' @format A data frame with 59 rows and 4 variables:
+#' \describe{
+#'   \item{STRATUM}{unique strata identifier from RACEBASE}
+#'   \item{AREA_KM2}{area of stratum in km2}
+#'   \item{PROP_TRAWL}{proportion of strata that is trawlable}
+#'   \item{DEPTH_BIN}{depth identifier}
+#'   ...
+#' }
+#' @source {RACEBASE}
+"goa.strata.area"
+
+
+#' ai.strata.area
+#' 
+#' Table of stata area for the Aleutian Islands
+#' 
+#' @format A data frame with 45 rows and 4 variables:
+#' \describe{
+#'   \item{STRATUM}{unique strata identifier from RACEBASE}
+#'   \item{AREA_KM2}{area of stratum in km2}
+#'   \item{PROP_TRAWL}{proportion of strata that is trawlable}
+#'   \item{DEPTH_BIN}{depth identifier}
+#'   ...
+#' }
+#' @source {RACEBASE}
+"ai.strata.area"
+
+
+
+
+
+
+
+
+
+
+
+
+
