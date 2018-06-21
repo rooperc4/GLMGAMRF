@@ -9,7 +9,7 @@
 #' combined catch of shrimp species in the bottom trawl haul and finally catch per unit of 
 #' effort for juvenile POP.
 
-#' @format A data frame with 4475 rows and 12 variables:
+#' @format A data frame with 4475 rows and 13 variables:
 #' \describe{
 #'   \item{hauljoin}{unique haul identifier from RACEBASE}
 #'   \item{lat}{midpoint of haul latitude}
@@ -22,6 +22,7 @@
 #'   \item{inverts}{combined catch of corals and sponges, in log(CPUE)}
 #'   \item{shrimp}{combined catch of shrimp species, in kg/ha}
 #'   \item{juvenile_POP_CPUE}{catch of juvenile Pacific ocean perch, in kg/ha}
+#'   \item{STRATUM}{stratum designation for haul}
 #'   ...
 #' }
 #' @source {RACEBASE}

@@ -336,7 +336,7 @@ rf.form <-as.formula(paste("rf.yvar ~", paste(rf.xvars,collapse="+"),"+year",sep
 Now we fit the random forest model using the PA.data dataset and the formula above.
 
 ```{r echo=FALSE, eval=TRUE, cache = TRUE}
-
+PA.data$year<-as.factor(PA.data$year)
 rf.cpue <- randomForest(rf.form,data=PA.data, mtry=3, ntree=1000, importance=TRUE, do.trace=250, keep.forest=TRUE) 
 print(rf.cpue)	
 
@@ -374,7 +374,7 @@ ggplot(rf.data,aes(x=rf.yvar,y=rf.cpue.predicted,color=as.factor(PA.data.year)))
 ```
 
 
-```{r estimate_gam_index_dm}
+```{r estimate_rf_index}
 
 rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue)
 pander::pandoc.table(rf.index,row.names=FALSE,digits=4, caption="Survey abundance index using Random Forest model")
