@@ -146,6 +146,8 @@ par(mfrow=c(1,1))
 cpue.glm.data<-data.frame(cpue.glm$y,cpue.glm$fitted.values,cpue.glm$data$year)
 
 ggplot(cpue.glm.data,aes(x=cpue.glm.y,y=cpue.glm.fitted.values,color=as.factor(cpue.glm.data.year)))+geom_point()+xlab("Observed CPUE")+ylab("Predicted CPUE")+theme(legend.position="right",legend.title=element_blank(),panel.background=element_blank())+geom_smooth(method="lm",formula=y~x,se=FALSE)
+
+calc_RMSE(cpue.glm$y,cpue.glm$fitted.values)
 ```
 
 ##COMBINING GLMs INTO ESTIMATE
@@ -283,6 +285,8 @@ cpue.gam.data<-data.frame(cpue.gam$y,cpue.gam$fitted.values,cpue.gam$data$year)
 
 ggplot(cpue.gam.data,aes(x=cpue.gam.data[,1],y=cpue.gam.fitted.values,color=as.factor(cpue.gam.data.year)))+geom_point()+xlab("Observed CPUE")+ylab("Predicted CPUE")+theme(legend.position="right",legend.title=element_blank(),panel.background=element_blank())+geom_smooth(method="lm",formula=y~x,se=FALSE)
 
+
+calc_RMSE(cpue.gam$y,cpue.gam$fitted.values)
 ```
 
 
@@ -351,12 +355,14 @@ rf.lm<-lm(rf.cpue$predicted~rf.yvar)
 plot(rf.lm)
 summary(rf.lm)
 varImpPlot(rf.cpue)
+
 calc_RMSE(rf.cpue$predicted,rf.yvar)
 
 par(mfrow=c(length(rf.xvars)/2,2))
-t2<-t(cbind(apply(PA.data[,rf.xvars],2,FUN="median",na.rm=TRUE)))
-t4<-median(PA.data$year)
-t2<-cbind(t2,year=t4)
+t2<-t(data.frame(cbind(unlist(apply(PA.data[,rf.xvars],2,FUN="median",na.rm=TRUE)))))
+year<-rep(PA.data$y[1],1001)
+#t2<-data.frame(t2,year=t4)
+#t2<-data.frame(t2,year=t4)
 for(i in 1:length(rf.xvars)){
 	mindata<-min(PA.data[,rf.xvars[i]],na.rm=TRUE)
 	maxdata<-max(PA.data[,rf.xvars[i]],na.rm=TRUE)
@@ -364,7 +370,7 @@ for(i in 1:length(rf.xvars)){
   t3<-rep.row(t2,1001)
   colnames(t3)<-colnames(t2)
 	t3[,i]<-xdata
-	p1<-predict(rf.cpue,t3,type="response")
+	p1<-predict(rf.cpue,cbind(t3),type="response")
 	plot(p1~xdata,xlab=rf.xvars[i],ylab="Effect on CPUE")
 }
 

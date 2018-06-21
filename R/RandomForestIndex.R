@@ -36,7 +36,7 @@ predict.rf.index<-function(data,rf.yvar,rf.form,rf.model,boot_reps=500){
     bootdata1<- sample(1:length(data[,1]), replace=TRUE)
     bootdata<-data.frame(data[bootdata1,])
     rf.yvar<-rf.yvar[bootdata1]
-    boot.pa<-randomForest(rf.form,data=data, mtry=3, ntree=1000, importance=TRUE,do.trace=500 ) 
+    boot.pa<-randomForest(rf.form,data=data, mtry=3, ntree=1000, importance=TRUE ) 
     print(mean(boot.pa$rsq))
 
     #temp1<-predict.glm.bindex(boot.pa,boot.cpue)
