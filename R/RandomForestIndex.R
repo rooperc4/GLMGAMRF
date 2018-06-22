@@ -54,5 +54,5 @@ predict.rf.index<-function(data,rf.yvar,rf.form,rf.model,boot_reps=500){
   upper_bootCI<-rf.index+1.96*index_est_sd$x#/sqrt(boot_reps)
   lower_bootCI<-rf.index-1.96*index_est_sd$x#/sqrt(boot_reps)
   
-  return(data.frame(years=years,rf.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
+  return(data.frame(years=year,rf.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
 }
