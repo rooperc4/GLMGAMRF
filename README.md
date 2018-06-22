@@ -23,21 +23,21 @@ pandoc.table(head(Juvenile_POP_Data),caption="Example RACEBASE extract for juven
 ```
 
     ## 
-    ## -----------------------------------------------------------------------------------------------------------------------
-    ##  hauljoin    lat     long    year   tdepth   btemp   bdepth   slope     inverts    ttemp   shrimp    juvenile_POP_CPUE 
-    ## ---------- ------- -------- ------ -------- ------- -------- -------- ----------- ------- --------- -------------------
-    ##   881077    56.14   -135.2   1996    9.4      4.4     291     1.882        0       11.8    0.01286           0         
+    ## ---------------------------------------------------------------------------------------------------------------------------------
+    ##  hauljoin    lat     long    year   tdepth   btemp   bdepth   slope     inverts    ttemp   shrimp    juvenile_POP_CPUE   STRATUM 
+    ## ---------- ------- -------- ------ -------- ------- -------- -------- ----------- ------- --------- ------------------- ---------
+    ##   881077    56.14   -135.2   1996    9.4      4.4     291     1.882        0       11.8    0.01286           0             250   
     ## 
-    ##   881078    55.92   -135.4   1996    25.4     4.9     275     6.926     0.6885     11.56    1.955          5.518       
+    ##   881078    55.92   -135.4   1996    25.4     4.9     275     6.926     0.6885     11.56    1.955          5.518           251   
     ## 
-    ##   881079    55.93   -135.4   1996    36.4     4.2     369     8.288      0.18      10.77      0              0         
+    ##   881079    55.93   -135.4   1996    36.4     4.2     369     8.288      0.18      10.77      0              0             351   
     ## 
-    ##   881080    55.93   -134.9   1996    10.4     5.4     180     0.7038    0.8072     10.95   0.05597         8.795       
+    ##   881080    55.93   -134.9   1996    10.4     5.4     180     0.7038    0.8072     10.95   0.05597         8.795           151   
     ## 
-    ##   881081    55.89   -134.6   1996    14.4     8.1      85       0      0.0004213   9.916      0              0         
+    ##   881081    55.89   -134.6   1996    14.4     8.1      85       0      0.0004213   9.916      0              0             50    
     ## 
-    ##   881082    55.66   -134.6   1996    20.4     5.5     206     0.4036       0       12.05   0.02139        0.3564       
-    ## -----------------------------------------------------------------------------------------------------------------------
+    ##   881082    55.66   -134.6   1996    20.4     5.5     206     0.4036       0       12.05   0.02139        0.3564           251   
+    ## ---------------------------------------------------------------------------------------------------------------------------------
     ## 
     ## Table: Example RACEBASE extract for juvenile POP catches in the Gulf of Alaska
 
@@ -312,6 +312,12 @@ ggplot(cpue.glm.data,aes(x=cpue.glm.y,y=cpue.glm.fitted.values,color=as.factor(c
 
 ![](GLMGAMRF_files/figure-markdown_github/plot_glm_cpue_results-2.png)
 
+``` r
+calc_RMSE(cpue.glm$y,cpue.glm$fitted.values)
+```
+
+    ## [1] 1.55
+
 COMBINING GLMs INTO ESTIMATE
 ----------------------------
 
@@ -365,19 +371,19 @@ pander::pandoc.table(glm.indexb,row.names=FALSE,digits=4,caption="Survey abundan
     ## -------------------------------------------------
     ##  years   glm.index   lower_bootCI   upper_bootCI 
     ## ------- ----------- -------------- --------------
-    ##  1996      1.109        0.9952         1.222     
+    ##  1996      1.109        0.9936         1.224     
     ## 
-    ##  1999      1.141        1.037          1.244     
+    ##  1999      1.141        1.034          1.247     
     ## 
-    ##  2001      1.158        1.014          1.303     
+    ##  2001      1.158        1.015          1.301     
     ## 
-    ##  2003      1.204        1.111          1.297     
+    ##  2003      1.204        1.105          1.304     
     ## 
-    ##  2005      1.333        1.241          1.424     
+    ##  2005      1.333        1.238          1.427     
     ## 
-    ##  2007      1.223         1.12          1.327     
+    ##  2007      1.223        1.118          1.329     
     ## 
-    ##  2009      1.289        1.213          1.365     
+    ##  2009      1.289        1.209          1.369     
     ## -------------------------------------------------
     ## 
     ## Table: Survey abundance index using Delta-lognormal GLM and bootstrapping method for estimating confidence intervals
@@ -406,7 +412,7 @@ Presence-absence model
 For the presence and absence model we specify the x and y variables and set up the formula. In this case we have chosen 4 x variables and converted the CPUE data to presence (1) or absence (0). It is important to include year as a factor in the formula so that the annual abundance index can be predicted. Habitat variables are included as part of the formula with an s() indicating fitting a smooth spline to the data, k=4 is used here to reduce the number of inflection points in the smooth fit. Since it is presence absence data, a binomial distribution and link=logit is used.
 
 ``` r
-gam.pa.xvars<-c("s(inverts,k=4)","s(slope,k=4)","s(btemp,k=4)","s(bdepth,k=4)","as.factor(year)")
+gam.pa.xvars<-c("s(inverts,k=4)","s(slope,k=4)","s(btemp,k=4)","s(bdepth,k=4)")
 gam.pa.yvar<-ifelse(PA.data[species.name]>0,1,0)
 gam.pa.form <-as.formula(paste("gam.pa.yvar ~", paste(gam.pa.xvars,collapse="+"),"+as.factor(year)",sep=""))
 ```
@@ -441,7 +447,7 @@ print(summary(pa.gam))
     ## 
     ## Formula:
     ## gam.pa.yvar ~ s(inverts, k = 4) + s(slope, k = 4) + s(btemp, 
-    ##     k = 4) + s(bdepth, k = 4) + as.factor(year) + as.factor(year)
+    ##     k = 4) + s(bdepth, k = 4) + as.factor(year)
     ## 
     ## Parametric coefficients:
     ##                     Estimate Std. Error z value
@@ -501,7 +507,7 @@ gam.check(pa.gam)
     ## s(inverts) 3.00 2.93    0.91  <2e-16 ***
     ## s(slope)   3.00 2.74    0.90  <2e-16 ***
     ## s(btemp)   3.00 2.94    0.91  <2e-16 ***
-    ## s(bdepth)  3.00 2.09    0.98    0.16    
+    ## s(bdepth)  3.00 2.09    0.98     0.2    
     ## ---
     ## Signif. codes:  
     ## 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
@@ -618,10 +624,10 @@ gam.check(cpue.gam)
     ## indicate that k is too low, especially if edf is close to k'.
     ## 
     ##              k'  edf k-index p-value    
-    ## s(inverts) 3.00 2.83    0.95   0.065 .  
+    ## s(inverts) 3.00 2.83    0.95    0.05 *  
     ## s(slope)   3.00 1.25    0.91  <2e-16 ***
-    ## s(btemp)   3.00 2.69    0.98   0.270    
-    ## s(bdepth)  3.00 2.88    0.99   0.325    
+    ## s(btemp)   3.00 2.69    0.98    0.26    
+    ## s(bdepth)  3.00 2.88    0.99    0.44    
     ## ---
     ## Signif. codes:  
     ## 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
@@ -640,6 +646,12 @@ ggplot(cpue.gam.data,aes(x=cpue.gam.data[,1],y=cpue.gam.fitted.values,color=as.f
 ```
 
 ![](GLMGAMRF_files/figure-markdown_github/plot_gam_cpue_results-3.png)
+
+``` r
+calc_RMSE(cpue.gam$y,cpue.gam$fitted.values)
+```
+
+    ## [1] 1.53
 
 COMBINING GAMs INTO ESTIMATE
 ----------------------------
@@ -696,19 +708,19 @@ pander::pandoc.table(gam.indexb,row.names=FALSE,digits=4,caption="Survey abundan
     ## -------------------------------------------------
     ##  years   gam.index   lower_bootCI   upper_bootCI 
     ## ------- ----------- -------------- --------------
-    ##  1996      1.099        0.981          1.217     
+    ##  1996      1.099        0.9774         1.221     
     ## 
-    ##  1999      1.156        1.046          1.266     
+    ##  1999      1.156        1.039          1.272     
     ## 
-    ##  2001      1.205        1.064          1.346     
+    ##  2001      1.205        1.067          1.343     
     ## 
-    ##  2003      1.252        1.143          1.362     
+    ##  2003      1.252        1.151          1.353     
     ## 
-    ##  2005      1.41         1.307          1.512     
+    ##  2005      1.41         1.314          1.506     
     ## 
-    ##  2007      1.303        1.198          1.408     
+    ##  2007      1.303        1.201          1.405     
     ## 
-    ##  2009      1.449        1.361          1.538     
+    ##  2009      1.449        1.359           1.54     
     ## -------------------------------------------------
     ## 
     ## Table: Survey abundance index using Delta-lognormal GAM and bootstrapping method for estimating confidence intervals
@@ -726,10 +738,201 @@ At this point we have generated a gam estimate of the abundance of our species u
 
 ------------------------------------------------------------------------
 
-RANDOM FOREST -- COMING SOON!
-=============================
+RANDOM FOREST
+=============
+
+The next model version is the random forest model. The first setp is to set up the data again. Here we will do only a single model for CPUE. Random forest does not necessarily require some of the assumptions of the statistical models (like an assumed error distribution or absence of collinearity among independent variables). So the setup and implimentation of the model is a bit simpler.
+
+``` r
+rf.xvars<-c("inverts","slope","btemp","bdepth")
+rf.yvar<-unlist(log(PA.data[species.name]+.5*min(subset(PA.data[species.name],PA.data[species.name]>0))))
+rf.form <-as.formula(paste("rf.yvar ~", paste(rf.xvars,collapse="+"),"+year",sep=""))
+```
+
+Now we fit the random forest model using the PA.data dataset and the formula above.
+
+    ##      |      Out-of-bag   |
+    ## Tree |      MSE  %Var(y) |
+    ##  250 |    2.103    68.54 |
+    ##  500 |    2.099    68.41 |
+    ##  750 |    2.097    68.32 |
+    ## 1000 |    2.096    68.30 |
+
+    ## 
+    ## Call:
+    ##  randomForest(formula = rf.form, data = PA.data, mtry = 3, ntree = 1000,      importance = TRUE, do.trace = 250, keep.forest = TRUE) 
+    ##                Type of random forest: regression
+    ##                      Number of trees: 1000
+    ## No. of variables tried at each split: 3
+    ## 
+    ##           Mean of squared residuals: 2.1
+    ##                     % Var explained: 31.7
+
+Now plot diagnostics for the random forest model (the typical data checks, residuals, and the observed and predicted values).
+
+``` r
+par(mfrow=c(2,2))
+plot(rf.cpue)
+rf.lm<-lm(rf.cpue$predicted~rf.yvar)
+plot(rf.lm)
+```
+
+![](GLMGAMRF_files/figure-markdown_github/plot_rf_results-1.png)
+
+``` r
+summary(rf.lm)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = rf.cpue$predicted ~ rf.yvar)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -3.246 -0.594 -0.256  0.424  4.987 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)
+    ## (Intercept) -0.89288    0.01656   -53.9   <2e-16
+    ## rf.yvar      0.33892    0.00741    45.7   <2e-16
+    ##                
+    ## (Intercept) ***
+    ## rf.yvar     ***
+    ## ---
+    ## Signif. codes:  
+    ## 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.869 on 4473 degrees of freedom
+    ## Multiple R-squared:  0.319,  Adjusted R-squared:  0.318 
+    ## F-statistic: 2.09e+03 on 1 and 4473 DF,  p-value: <2e-16
+
+``` r
+varImpPlot(rf.cpue)
+```
+
+![](GLMGAMRF_files/figure-markdown_github/plot_rf_results-2.png)![](GLMGAMRF_files/figure-markdown_github/plot_rf_results-3.png)
+
+``` r
+calc_RMSE(rf.cpue$predicted,rf.yvar)
+```
+
+    ## [1] 1.45
+
+``` r
+par(mfrow=c(length(rf.xvars)/2,2))
+t2<-t(data.frame(cbind(unlist(apply(PA.data[,rf.xvars],2,FUN="median",na.rm=TRUE)))))
+year<-rep(PA.data$y[1],1001)
+#t2<-data.frame(t2,year=t4)
+#t2<-data.frame(t2,year=t4)
+for(i in 1:length(rf.xvars)){
+    mindata<-min(PA.data[,rf.xvars[i]],na.rm=TRUE)
+    maxdata<-max(PA.data[,rf.xvars[i]],na.rm=TRUE)
+    xdata<-seq(mindata,maxdata,by=(maxdata-mindata)/1000)
+  t3<-rep.row(t2,1001)
+  colnames(t3)<-colnames(t2)
+    t3[,i]<-xdata
+    p1<-predict(rf.cpue,cbind(t3),type="response")
+    plot(p1~xdata,xlab=rf.xvars[i],ylab="Effect on CPUE")
+}
+```
+
+![](GLMGAMRF_files/figure-markdown_github/plot_rf_results-4.png)
+
+``` r
+par(mfrow=c(1,1))
+rf.data<-data.frame(rf.yvar,rf.cpue$predicted,PA.data$year)
+ggplot(rf.data,aes(x=rf.yvar,y=rf.cpue.predicted,color=as.factor(PA.data.year)))+geom_point()+xlab("Observed CPUE")+ylab("Predicted CPUE")+theme(legend.position="right",legend.title=element_blank(),panel.background=element_blank())+geom_smooth(method="lm",formula=y~x,se=FALSE)
+```
+
+![](GLMGAMRF_files/figure-markdown_github/plot_rf_results-5.png)
+
+``` r
+rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue,100)
+pander::pandoc.table(rf.index,row.names=FALSE,digits=4, caption="Survey abundance index using Random Forest model")
+```
+
+    ## 
+    ## ------------------------------------------------
+    ##  years   rf.index   lower_bootCI   upper_bootCI 
+    ## ------- ---------- -------------- --------------
+    ##  1996     0.232        0.2065         0.2576    
+    ## 
+    ##  1999     0.1453       0.1323         0.1582    
+    ## 
+    ##  2001     0.1251       0.1161         0.1342    
+    ## 
+    ##  2003     0.2643       0.2393         0.2893    
+    ## 
+    ##  2005     0.1596       0.1475         0.1716    
+    ## 
+    ##  2007     0.1741       0.162          0.1861    
+    ## 
+    ##  2009     0.4007       0.3579         0.4435    
+    ## ------------------------------------------------
+    ## 
+    ## Table: Survey abundance index using Random Forest model
+
+``` r
+p<-ggplot(rf.index,aes(x=as.numeric(levels(years)),y=rf.index))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=lower_bootCI, ymax=upper_bootCI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=as.numeric(levels(rf.index$years)))+ggtitle(paste("Survey index for ",species.name, " (Random Forest method CI's)",sep=""))
+p
+```
+
+![](GLMGAMRF_files/figure-markdown_github/estimate_rf_index-1.png)
 
 ------------------------------------------------------------------------
+
+DESIGN BASED ESTIMATE
+=====================
+
+The design based estimate calls a function "Stratified\_CPUE" that takes the CPUE values, the stratum names, stratum areas and year and spits out a time series of biomass estimates and variances (both total and by strata). The function also takes an estimate of the proportion of the strata that is "trawlable". This defaults to 1.
+
+The stratum designation and stratum area for each haul is needed for this estimate, so here we read in this data and attach to the Juvnenile\_POP\_Data.
+
+Next we use the stratum\_area function to generate stratum areas for each haul in the data set. We need to specify the data set, the column name that has the stratum designations and the region of interest for the function.
+
+``` r
+Design.data<-get_strata_area(Juvenile_POP_Data,"STRATUM","GOA")
+Design.data<-subset(Design.data,Design.data$STRATUM>0)
+```
+
+Then we use the Stratified\_CPUE function to generate design based estimates. For this function we need to specify columns for the calculations: the CPUE column, the year column, the strata designator, the strata area, the region, and the proportion trawlable (default is 1). Note, for the Juvenile\_POP\_Data, there are only 4 years where data on the strata membership is known (due to the time when these data were extracted from RACEBASE), therefore, the time series is not complete.
+
+``` r
+design.index<-Stratified_CPUE(Design.data$juvenile_POP_CPUE,Design.data$year,Design.data$STRATUM,Design.data$AREA_KM2,"GOA",1, "CPUE")
+pander::pandoc.table(design.index,row.names=FALSE,digits=4,caption="Survey abundance index design-based estimators")
+```
+
+    ## 
+    ## ------------------------------------------------------
+    ##  Year   CPUE     Var       SE     Lower_CI   Upper_CI 
+    ## ------ ------- -------- -------- ---------- ----------
+    ##  2003   3.081   0.9932   0.9966    1.086      5.076   
+    ## 
+    ##  2009   4.731   1.038    1.019     2.691      6.771   
+    ## 
+    ##  1999   2.567   0.4166   0.6455    1.275      3.859   
+    ## 
+    ##  2001   3.538   0.7133   0.8446    1.847      5.229   
+    ## 
+    ##  1996   2.376   0.5926   0.7698    0.8353     3.917   
+    ## 
+    ##  2007   2.533   0.3014   0.549     1.434      3.632   
+    ## 
+    ##  2005   3.723   0.2818   0.5308    2.661      4.786   
+    ## ------------------------------------------------------
+    ## 
+    ## Table: Survey abundance index design-based estimators
+
+``` r
+p<-ggplot(design.index,aes(x=Year,y=CPUE))+geom_line()+geom_point()+
+  geom_ribbon(aes(ymin=Lower_CI, ymax=Upper_CI),
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=design.index$Year)+ggtitle(paste("Survey index for ",species.name, " (design based with CI's)",sep=""))
+p
+```
+
+![](GLMGAMRF_files/figure-markdown_github/Design_index-1.png) \*\*\*
 
 SPATIAL PATTERNS IN RESIDUALS
 =============================
@@ -739,27 +942,13 @@ Look for any significant spatial patterns in the residuals, by fitting a kriging
 ``` r
 glm.cpue.predict<-predict(cpue.glm,pa.glm$data,type="response")*pa.glm$fitted.values
 spatial_resids(PA.data$long,PA.data$lat,(glm.cpue.predict-unlist(PA.data[species.name])),glm.cpue.predict,unlist(PA.data[species.name]),region="GOA")
-```
-
-    ## png 
-    ##   2
-
-``` r
 knitr::include_graphics("spatial_resids.png")
 ```
 
-<img src="spatial_resids.png" width="2100" /> Here's the code for the GAM model.
+Here's the code for the GAM model.
 
 ``` r
 gam.cpue.predict<-predict(cpue.gam,pa.gam$data,type="response")*pa.gam$fitted.values
 spatial_resids(PA.data$long,PA.data$lat,(gam.cpue.predict-unlist(PA.data[species.name])),gam.cpue.predict,unlist(PA.data[species.name]),region="GOA")
-```
-
-    ## png 
-    ##   2
-
-``` r
 knitr::include_graphics("spatial_resids.png")
 ```
-
-<img src="spatial_resids.png" width="2100" />

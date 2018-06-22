@@ -382,12 +382,12 @@ ggplot(rf.data,aes(x=rf.yvar,y=rf.cpue.predicted,color=as.factor(PA.data.year)))
 
 ```{r estimate_rf_index}
 
-rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue)
+rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue,100)
 pander::pandoc.table(rf.index,row.names=FALSE,digits=4, caption="Survey abundance index using Random Forest model")
 
-p<-ggplot(rf.index,aes(x=years,y=rf.index))+geom_line()+geom_point()+
+p<-ggplot(rf.index,aes(x=as.numeric(levels(years)),y=rf.index))+geom_line()+geom_point()+
   geom_ribbon(aes(ymin=lower_bootCI, ymax=upper_bootCI),
-              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=rf.index$years)+ggtitle(paste("Survey index for ",species.name, " (Random Forest method CI's)",sep=""))
+              alpha=0.2)+xlab("Year")+ylab("Index of abundance")+scale_x_continuous(breaks=as.numeric(levels(rf.index$years)))+ggtitle(paste("Survey index for ",species.name, " (Random Forest method CI's)",sep=""))
 p
 ```
 
