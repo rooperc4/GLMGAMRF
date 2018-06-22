@@ -24,7 +24,7 @@ predict.rf.index<-function(data,rf.yvar,rf.form,rf.model,boot_reps=500){
   pa.meds.names<-colnames(data)
   year<-unique(data$year)
   
-  pa.meds<-rep.row(pa.meds,length(yrs))
+  pa.meds<-rep.row(pa.meds,length(year))
   colnames(pa.meds)<-pa.meds.names
   colnames(pa.meds)[which(colnames(pa.meds)=="year")]<-"y1"
   pa.meds<-data.frame(pa.meds,year)
@@ -39,20 +39,20 @@ predict.rf.index<-function(data,rf.yvar,rf.form,rf.model,boot_reps=500){
     bootdata<-data.frame(data[bootdata1,])
     rf.yvar<-rf.yvar[bootdata1]
     boot.pa<-randomForest(rf.form,data=data, mtry=3, ntree=1000, importance=TRUE ) 
-    print(mean(boot.pa$rsq))
+    #print(mean(boot.pa$rsq))
 
     #temp1<-predict.glm.bindex(boot.pa,boot.cpue)
     temp.raw.index<-predict(boot.pa,newdata=pa.meds,type="response")
     rf.index<-exp(rf.raw.index)
     temp.index<-exp(temp.raw.index)-.5*min(subset(rf.yvar,rf.yvar>0))  
-    temp.index<-cbind(yrs,temp.index)
+    temp.index<-cbind(year,temp.index)
     
     index_ests<-rbind(index_ests,temp.index)
   }
   
-  index_est_sd<-aggregate(index_ests$temp.index,by=list(index_ests$yrs),FUN=sd)
+  index_est_sd<-aggregate(index_ests$temp.index,by=list(index_ests$year),FUN=sd)
   upper_bootCI<-rf.index+1.96*index_est_sd$x#/sqrt(boot_reps)
   lower_bootCI<-rf.index-1.96*index_est_sd$x#/sqrt(boot_reps)
   
-  return(data.frame(years=yrs,rf.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
+  return(data.frame(years=years,rf.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
 }
