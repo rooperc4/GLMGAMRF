@@ -80,12 +80,12 @@ glm.pa.form1 <- as.formula(paste("glm.pa.yvar ~", paste(glm.pa.xvars1,collapse="
 pa.glm1 <- glm(glm.pa.form1, family = binomial, data =PA.data)
 gcv_glm1<-pa.glm1$aic
 
-if(gcv_glm1<gcv_glm){
+if(gcv_glm1<=gcv_glm){
 	glm.pa.form<-glm.pa.form1
 #	gcv_glm<-gcv_glm1
 	glm.pa.xvars<-glm.pa.xvars1
 }
-if(gcv_glm1>=gcv_glm)break}
+if(gcv_glm1>gcv_glm)break}
 pander(summary(pa.glm),split.table=Inf, caption="Best-fitting model of Juvenile POP presence or absence")
 
 ```
@@ -126,12 +126,12 @@ glm.cpue.form1 <- as.formula(paste("glm.cpue.yvar ~", paste(glm.cpue.xvars1,coll
 cpue.glm1 <- glm(glm.cpue.form1, family = gaussian, data =CPUE.data)
 gcv_glm1<-cpue.glm1$aic
 
-if(gcv_glm1<gcv_glm){
+if(gcv_glm1<=gcv_glm){
 	glm.cpue.form<-glm.cpue.form1
 #	gcv_glm<-gcv_glm1
 	glm.cpue.xvars<-glm.cpue.xvars1
 }
-if(gcv_glm1>=gcv_glm)break}
+if(gcv_glm1>gcv_glm)break}
 print(summary(cpue.glm))
 
 ```
@@ -382,7 +382,7 @@ ggplot(rf.data,aes(x=rf.yvar,y=rf.cpue.predicted,color=as.factor(PA.data.year)))
 
 ```{r estimate_rf_index}
 
-rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue,100)
+rf.index<-predict.rf.index(PA.data,rf.yvar,rf.xvars,rf.form,rf.cpue,100)
 pander::pandoc.table(rf.index,row.names=FALSE,digits=4, caption="Survey abundance index using Random Forest model")
 
 p<-ggplot(rf.index,aes(x=as.numeric(levels(years)),y=rf.index))+geom_line()+geom_point()+

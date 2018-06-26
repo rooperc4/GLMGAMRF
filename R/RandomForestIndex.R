@@ -6,6 +6,7 @@
 #' index. The function back-transforms the index and the CI's.
 #' @param data data used to formulate the random forest model
 #' @param rf.yvar y variables (CPUE) in the random forest model
+#' @param rf.xvars x variables in the random forest model
 #' @param rf.form formula for the random forest model
 #' @param rf.model random forest model to bootstrap
 #' @param boot_reps number of bootstrap replications (default = 500)
@@ -14,19 +15,19 @@
 #' @examples
 #' rf.cpue <- randomForest(rf.form,data=PA.data, mtry=3, ntree=1000, importance=TRUE, do.trace=250, keep.forest=TRUE) 
 #' print(rf.cpue)	
-#' rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue)
+#' rf.index<-predict.rf.index(PA.data,rf.yvar,rf.xvars,rf.form,rf.cpue)
 #' 
 #######bootstrapping method
 
-predict.rf.index<-function(data,rf.yvar,rf.form,rf.model,boot_reps=500){
-  pa.meds<-as.numeric(t(apply(data,MARGIN=2,FUN="median",na.rm=TRUE)))
+predict.rf.index<-function(data,rf.yvar,rf.xvars,rf.form,rf.model,boot_reps=500){
+  pa.meds<-as.numeric(t(apply(cbind(data[rf.xvars]),MARGIN=2,FUN="median",na.rm=TRUE)))
   pa.meds<-t(matrix(pa.meds,byrow=FALSE))
-  pa.meds.names<-colnames(data)
+#  pa.meds.names<-colnames(data)
   year<-unique(data$year)
   
   pa.meds<-rep.row(pa.meds,length(year))
-  colnames(pa.meds)<-pa.meds.names
-  colnames(pa.meds)[which(colnames(pa.meds)=="year")]<-"y1"
+  colnames(pa.meds)<-rf.xvars
+  #colnames(pa.meds)[which(colnames(pa.meds)=="year")]<-"y1"
   pa.meds<-data.frame(pa.meds,year)
 
   rf.raw.index<-predict(rf.model,newdata=pa.meds,type="response")
