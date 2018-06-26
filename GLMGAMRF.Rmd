@@ -4,7 +4,7 @@ title: |-
   RACE Bottom Trawl Survey using GLM, GAM and Random
   Forest
 author: "Chris Rooper"
-date: "June 15, 2018"
+date: "June 25, 2018"
 output: github_document
 ---
 

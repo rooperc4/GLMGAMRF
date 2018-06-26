@@ -1,7 +1,7 @@
 Habitat Model Abundance Indices estimated from RACE Bottom Trawl Survey using GLM, GAM and Random Forest
 ================
 Chris Rooper
-June 15, 2018
+June 25, 2018
 
 Purpose
 -------
@@ -81,12 +81,12 @@ glm.pa.form1 <- as.formula(paste("glm.pa.yvar ~", paste(glm.pa.xvars1,collapse="
 pa.glm1 <- glm(glm.pa.form1, family = binomial, data =PA.data)
 gcv_glm1<-pa.glm1$aic
 
-if(gcv_glm1<gcv_glm){
+if(gcv_glm1<=gcv_glm){
     glm.pa.form<-glm.pa.form1
 #   gcv_glm<-gcv_glm1
     glm.pa.xvars<-glm.pa.xvars1
 }
-if(gcv_glm1>=gcv_glm)break}
+if(gcv_glm1>gcv_glm)break}
 pander(summary(pa.glm),split.table=Inf, caption="Best-fitting model of Juvenile POP presence or absence")
 ```
 
@@ -242,12 +242,12 @@ glm.cpue.form1 <- as.formula(paste("glm.cpue.yvar ~", paste(glm.cpue.xvars1,coll
 cpue.glm1 <- glm(glm.cpue.form1, family = gaussian, data =CPUE.data)
 gcv_glm1<-cpue.glm1$aic
 
-if(gcv_glm1<gcv_glm){
+if(gcv_glm1<=gcv_glm){
     glm.cpue.form<-glm.cpue.form1
 #   gcv_glm<-gcv_glm1
     glm.cpue.xvars<-glm.cpue.xvars1
 }
-if(gcv_glm1>=gcv_glm)break}
+if(gcv_glm1>gcv_glm)break}
 print(summary(cpue.glm))
 ```
 
@@ -371,19 +371,19 @@ pander::pandoc.table(glm.indexb,row.names=FALSE,digits=4,caption="Survey abundan
     ## -------------------------------------------------
     ##  years   glm.index   lower_bootCI   upper_bootCI 
     ## ------- ----------- -------------- --------------
-    ##  1996      1.109        0.9936         1.224     
+    ##  1996      1.109        0.991          1.226     
     ## 
-    ##  1999      1.141        1.034          1.247     
+    ##  1999      1.141        1.036          1.245     
     ## 
-    ##  2001      1.158        1.015          1.301     
+    ##  2001      1.158        1.026          1.291     
     ## 
-    ##  2003      1.204        1.105          1.304     
+    ##  2003      1.204        1.107          1.302     
     ## 
-    ##  2005      1.333        1.238          1.427     
+    ##  2005      1.333        1.245          1.421     
     ## 
-    ##  2007      1.223        1.118          1.329     
+    ##  2007      1.223        1.116          1.331     
     ## 
-    ##  2009      1.289        1.209          1.369     
+    ##  2009      1.289        1.205          1.373     
     ## -------------------------------------------------
     ## 
     ## Table: Survey abundance index using Delta-lognormal GLM and bootstrapping method for estimating confidence intervals
@@ -624,10 +624,10 @@ gam.check(cpue.gam)
     ## indicate that k is too low, especially if edf is close to k'.
     ## 
     ##              k'  edf k-index p-value    
-    ## s(inverts) 3.00 2.83    0.95    0.05 *  
+    ## s(inverts) 3.00 2.83    0.95   0.055 .  
     ## s(slope)   3.00 1.25    0.91  <2e-16 ***
-    ## s(btemp)   3.00 2.69    0.98    0.26    
-    ## s(bdepth)  3.00 2.88    0.99    0.44    
+    ## s(btemp)   3.00 2.69    0.98   0.255    
+    ## s(bdepth)  3.00 2.88    0.99   0.400    
     ## ---
     ## Signif. codes:  
     ## 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
@@ -708,19 +708,19 @@ pander::pandoc.table(gam.indexb,row.names=FALSE,digits=4,caption="Survey abundan
     ## -------------------------------------------------
     ##  years   gam.index   lower_bootCI   upper_bootCI 
     ## ------- ----------- -------------- --------------
-    ##  1996      1.099        0.9774         1.221     
+    ##  1996      1.099        0.9804         1.218     
     ## 
-    ##  1999      1.156        1.039          1.272     
+    ##  1999      1.156        1.042          1.269     
     ## 
     ##  2001      1.205        1.067          1.343     
     ## 
-    ##  2003      1.252        1.151          1.353     
+    ##  2003      1.252         1.14          1.364     
     ## 
-    ##  2005      1.41         1.314          1.506     
+    ##  2005      1.41         1.313          1.506     
     ## 
-    ##  2007      1.303        1.201          1.405     
+    ##  2007      1.303        1.193          1.414     
     ## 
-    ##  2009      1.449        1.359           1.54     
+    ##  2009      1.449        1.367          1.532     
     ## -------------------------------------------------
     ## 
     ## Table: Survey abundance index using Delta-lognormal GAM and bootstrapping method for estimating confidence intervals
@@ -847,7 +847,7 @@ ggplot(rf.data,aes(x=rf.yvar,y=rf.cpue.predicted,color=as.factor(PA.data.year)))
 ![](GLMGAMRF_files/figure-markdown_github/plot_rf_results-5.png)
 
 ``` r
-rf.index<-predict.rf.index(PA.data,rf.yvar,rf.form,rf.cpue,100)
+rf.index<-predict.rf.index(PA.data,rf.yvar,rf.xvars,rf.form,rf.cpue,100)
 pander::pandoc.table(rf.index,row.names=FALSE,digits=4, caption="Survey abundance index using Random Forest model")
 ```
 
