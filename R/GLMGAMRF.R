@@ -35,6 +35,7 @@ predict.glm.index<-function(pa.model,cpue.model){
   pa.meds<-data.frame(rep.row(pa.meds,length(yrs)))
   colnames(pa.meds)<-pa.meds.names
   pa.meds$year<-yrs
+  pa.meds<-pa.meds[order(pa.meds$year),]
   
   pa.predict<-predict(pa.model,newdata=pa.meds,type="response",se.fit=TRUE)
   cpue.predict<-predict(cpue.model,newdata=pa.meds,type="response",se.fit=TRUE)
@@ -84,7 +85,7 @@ glm.index<-exp(glm.raw.index)
 upper_CI<-exp(glm.raw.index+1.96*glm.index.sd)
 lower_CI<-exp(glm.raw.index-1.96*glm.index.sd)
 
-  return(data.frame(years=yrs,glm.index,lower_CI=lower_CI,upper_CI=upper_CI))
+  return(data.frame(years=pa.meds$year,glm.index,lower_CI=lower_CI,upper_CI=upper_CI))
 }
 
 #' A function to predict CPUE-index from a delta-lognormal GLM with bootstrapped errors
@@ -123,6 +124,7 @@ predict.glm.bindex<-function(pa.model,cpue.model,boot_reps=500){
   pa.meds<-data.frame(rep.row(pa.meds,length(yrs)))
   colnames(pa.meds)<-pa.meds.names
   pa.meds$year<-yrs
+  pa.meds<-pa.meds[order(pa.meds$year),]
   
   pa.predict<-predict(pa.model,newdata=pa.meds,type="response",se.fit=TRUE)
   cpue.predict<-predict(cpue.model,newdata=pa.meds,type="response",se.fit=TRUE)
@@ -156,7 +158,7 @@ index_est_sd<-aggregate(index_ests$temp.index,by=list(index_ests$yrs),FUN=sd)
 upper_bootCI<-glm.index+1.96*index_est_sd$x#/sqrt(boot_reps)
 lower_bootCI<-glm.index-1.96*index_est_sd$x#/sqrt(boot_reps)
 
-return(data.frame(years=yrs,glm.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
+return(data.frame(years=pa.meds$year,glm.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
 }
 ############################################################################
 ########repeat row-column functions
@@ -228,6 +230,7 @@ predict.gam.index<-function(pa.model,cpue.model){
   pa.meds<-data.frame(rep.row(pa.meds,length(yrs)))
   colnames(pa.meds)<-pa.meds.names
   pa.meds$year<-yrs
+  pa.meds<-pa.meds[order(pa.meds$year),]
   
   pa.predict<-predict(pa.model,newdata=pa.meds,type="response",se.fit=TRUE)
   cpue.predict<-predict(cpue.model,newdata=pa.meds,type="response",se.fit=TRUE)
@@ -277,7 +280,7 @@ predict.gam.index<-function(pa.model,cpue.model){
   upper_CI<-exp(gam.raw.index+1.96*gam.index.sd)
   lower_CI<-exp(gam.raw.index-1.96*gam.index.sd)
   
-  return(data.frame(years=yrs,gam.index,lower_CI=lower_CI,upper_CI=upper_CI))
+  return(data.frame(years=pa.meds$year,gam.index,lower_CI=lower_CI,upper_CI=upper_CI))
 }
 
 #' A function to predict CPUE-index from a delta-lognormal GAM with bootstrapped errors
@@ -316,6 +319,7 @@ predict.gam.bindex<-function(pa.model,cpue.model,boot_reps=500){
   pa.meds<-data.frame(rep.row(pa.meds,length(yrs)))
   colnames(pa.meds)<-pa.meds.names
   pa.meds$year<-yrs
+  pa.meds<-pa.meds[order(pa.meds$year),]
   
   pa.predict<-predict(pa.model,newdata=pa.meds,type="response",se.fit=TRUE)
   cpue.predict<-predict(cpue.model,newdata=pa.meds,type="response",se.fit=TRUE)
@@ -349,5 +353,5 @@ predict.gam.bindex<-function(pa.model,cpue.model,boot_reps=500){
   upper_bootCI<-gam.index+1.96*index_est_sd$x#/sqrt(boot_reps)
   lower_bootCI<-gam.index-1.96*index_est_sd$x#/sqrt(boot_reps)
   
-  return(data.frame(years=yrs,gam.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
+  return(data.frame(years=pa.meds$year,gam.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
 }

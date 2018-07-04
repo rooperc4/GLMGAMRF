@@ -55,8 +55,8 @@ Strat_index2[j,3]<-CPUEh
 Strat_index2[j,4]<-varCPUEh
 Strat_index2[j,5]<-Biomassh
 Strat_index2[j,6]<-varBiomassh
-Strat_index2[j,7]<-Biomassh/10-tval*sqrt(varBiomassh)
-Strat_index2[j,8]<-Biomassh/10+tval*sqrt(varBiomassh)
+Strat_index2[j,7]<-Biomassh-tval*sqrt(varBiomassh)
+Strat_index2[j,8]<-Biomassh+tval*sqrt(varBiomassh)
 }
 if(length(CPUE)<1){Strat_index2[j,1]<-stratas[j]}
 }
@@ -65,13 +65,14 @@ varBiomassy<-sum(Strat_index2[,6],na.rm=TRUE)
 tval<-qt(1-.05/2,df=(length(stratas)-1))
 #tval<-1.96
 Strat_index1[i,1]<-years[i]
-Strat_index1[i,2]<-Biomassy/1000
-Strat_index1[i,3]<-varBiomassy/1000
-Strat_index1[i,4]<-sqrt(varBiomassy)/1000
-Strat_index1[i,5]<-Biomassy/1000-tval*sqrt(varBiomassy)/1000
-Strat_index1[i,6]<-Biomassy/1000+tval*sqrt(varBiomassy)/1000
+Strat_index1[i,2]<-Biomassy
+Strat_index1[i,3]<-varBiomassy
+Strat_index1[i,4]<-sqrt(varBiomassy)
+Strat_index1[i,5]<-Biomassy-tval*sqrt(varBiomassy)
+Strat_index1[i,6]<-Biomassy+tval*sqrt(varBiomassy)
 }
 colnames(Strat_index1)<-c("Year","Biomass","Var","SE","Lower_CI","Upper_CI")
+Strat_index1<-Strat_index1[order(Strat_index1[,1]),]
 return(data.frame(Strat_index1))}
 
 #############################################################################
@@ -96,8 +97,8 @@ if(method=="CPUE"){
         Strat_index2[j,4]<-varCPUEh
         Strat_index2[j,5]<-length(CPUE)
         Strat_index2[j,6]<-varBiomassh
-        Strat_index2[j,7]<-Biomassh/10-tval*sqrt(varBiomassh)
-        Strat_index2[j,8]<-Biomassh/10+tval*sqrt(varBiomassh)
+        Strat_index2[j,7]<-Biomassh-tval*sqrt(varBiomassh)
+        Strat_index2[j,8]<-Biomassh+tval*sqrt(varBiomassh)
       }
       if(length(CPUE)<1){Strat_index2[j,1]<-stratas[j]}
     }
@@ -113,6 +114,7 @@ if(method=="CPUE"){
     Strat_index1[i,6]<-CPUEy+tval*sqrt(varCPUEy)
   }
   colnames(Strat_index1)<-c("Year","CPUE","Var","SE","Lower_CI","Upper_CI")
+  Strat_index1<-Strat_index1[order(Strat_index1[,1]),]
   return(data.frame(Strat_index1))}
 }
 

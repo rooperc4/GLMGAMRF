@@ -20,6 +20,8 @@
 #######bootstrapping method
 
 predict.rf.index<-function(data,rf.yvar,rf.xvars,rf.form,rf.model,boot_reps=500){
+#data<-PA.data
+#rf.model<-rf.cpue
   pa.meds<-as.numeric(t(apply(cbind(data[rf.xvars]),MARGIN=2,FUN="median",na.rm=TRUE)))
   pa.meds<-t(matrix(pa.meds,byrow=FALSE))
 #  pa.meds.names<-colnames(data)
@@ -29,7 +31,8 @@ predict.rf.index<-function(data,rf.yvar,rf.xvars,rf.form,rf.model,boot_reps=500)
   colnames(pa.meds)<-rf.xvars
   #colnames(pa.meds)[which(colnames(pa.meds)=="year")]<-"y1"
   pa.meds<-data.frame(pa.meds,year)
-
+  pa.meds<-pa.meds[order(pa.meds$year),]
+  
   rf.raw.index<-predict(rf.model,newdata=pa.meds,type="response")
   rf.index<-exp(rf.raw.index)-.5*min(subset(rf.yvar,rf.yvar>0))
 
@@ -46,14 +49,14 @@ predict.rf.index<-function(data,rf.yvar,rf.xvars,rf.form,rf.model,boot_reps=500)
     temp.raw.index<-predict(boot.pa,newdata=pa.meds,type="response")
     rf.index<-exp(rf.raw.index)
     temp.index<-exp(temp.raw.index)-.5*min(subset(rf.yvar,rf.yvar>0))  
-    temp.index<-cbind(year,temp.index)
+    temp.index<-cbind(yrs=pa.meds$year,temp.index)
     
     index_ests<-rbind(index_ests,temp.index)
   }
   
-  index_est_sd<-aggregate(index_ests$temp.index,by=list(index_ests$year),FUN=sd)
+  index_est_sd<-aggregate(index_ests$temp.index,by=list(index_ests$yrs),FUN=sd)
   upper_bootCI<-rf.index+1.96*index_est_sd$x#/sqrt(boot_reps)
   lower_bootCI<-rf.index-1.96*index_est_sd$x#/sqrt(boot_reps)
   
-  return(data.frame(years=year,rf.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
+  return(data.frame(years=pa.meds$year,rf.index,lower_bootCI=lower_bootCI,upper_bootCI=upper_bootCI))
 }
