@@ -71,7 +71,7 @@ cpue.obsyr<-aggregate(cpue.model$y,by=list(cpue.data$year),FUN=mean)
 #Covdp<-cov(pa.predict$fit,cpue.predict$fit) #Using cov function
 
 ###COV term using dependent variables
-Covdp<-cov(pa.predict$fit^2,cpue.predict$fit^2)+mean(pa.predict$fit^2)*mean(cpue.predict$fit^2)-
+Covdp<-cov(pa.predict$fit^2,cpue.predict$fit^2)+mean(pa.predict$fit)^2*mean(cpue.predict$fit)^2-
   (cov(pa.predict$fit,cpue.predict$fit)+mean(pa.predict$fit)*mean(cpue.predict$fit))^2
 #Covdp<-cov(d$x^2,P$x^2)+P$x^2*d$x^2-(cov(P$x,d$x)+(P$x*d$x))^2
 
@@ -266,7 +266,7 @@ predict.gam.index<-function(pa.model,cpue.model){
   #Covdp<-cov(pa.predict$fit,cpue.predict$fit) #Using cov function
   
   ###COV term using dependent variables
-  Covdp<-cov(pa.predict$fit^2,cpue.predict$fit^2)+mean(pa.predict$fit^2)*mean(cpue.predict$fit^2)-
+  Covdp<-cov(pa.predict$fit^2,cpue.predict$fit^2)+mean(pa.predict$fit)^2*mean(cpue.predict$fit)^2-
     (cov(pa.predict$fit,cpue.predict$fit)+mean(pa.predict$fit)*mean(cpue.predict$fit))^2
   #Covdp<-cov(d$x^2,P$x^2)+P$x^2*d$x^2-(cov(P$x,d$x)+(P$x*d$x))^2
   
